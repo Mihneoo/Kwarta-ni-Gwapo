@@ -1,0 +1,177 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createInstallment, createTransaction, getDashboard, payInstallment, updateCapital } from "@/lib/api";
+import type { DashboardData, NeedType } from "@/types";
+
+type IconName = "grid" | "arrows" | "pie" | "calendar" | "settings" | "shield" | "plus" | "arrow" | "wallet" | "income" | "expense" | "chevron" | "close" | "food" | "home" | "cart" | "tag" | "coffee" | "spark";
+
+function Icon({ name }: { name: IconName }) {
+  const common = { width: 17, height: 17, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true as const };
+  const paths: Record<IconName, React.ReactNode> = {
+    grid: <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
+    arrows: <><path d="M7 7h13l-3-3"/><path d="M20 7l-3 3"/><path d="M17 17H4l3 3"/><path d="M4 17l3-3"/></>,
+    pie: <><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M13 3.1A9 9 0 0 1 20.9 11H13z"/></>,
+    calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
+    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-1.8 1.8-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.55v-.11a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06-1.8-1.8.06-.06A1.7 1.7 0 0 0 8.14 15a1.7 1.7 0 0 0-1.56-1.03H6v-2.55h.58A1.7 1.7 0 0 0 8.14 10a1.7 1.7 0 0 0-.34-1.87l-.06-.06 1.8-1.8.06.06a1.7 1.7 0 0 0 1.87.34A1.7 1.7 0 0 0 12.5 5.1V5h2.55v.11a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06 1.8 1.8-.06.06a1.7 1.7 0 0 0-.34 1.87 1.7 1.7 0 0 0 1.56 1.03h.11v2.55h-.11A1.7 1.7 0 0 0 19.4 15z"/></>,
+    shield: <><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/><path d="m9 12 2 2 4-4"/></>,
+    plus: <><path d="M12 5v14M5 12h14"/></>,
+    arrow: <><path d="M7 17 17 7M7 7h10v10"/></>,
+    wallet: <><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M16 15h2"/></>,
+    income: <><path d="M12 19V5M6 11l6-6 6 6"/></>,
+    expense: <><path d="M12 5v14M6 13l6 6 6-6"/></>,
+    chevron: <><path d="m9 18 6-6-6-6"/></>,
+    close: <><path d="m18 6-12 12M6 6l12 12"/></>,
+    food: <><path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 3c-2 2-3 4-3 7h3v11M17 3v7"/></>,
+    home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-8h6v8"/></>,
+    cart: <><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.5 12h12L21 7H5"/></>,
+    tag: <><path d="M20 13 13 20 3 10V3h7z"/><circle cx="7.5" cy="7.5" r=".8"/></>,
+    coffee: <><path d="M4 8h14v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M18 10h1a3 3 0 0 1 0 6h-1M8 3v2M13 3v2"/></>,
+    spark: <><path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-2-5.8L4 11l6-2.2z"/><path d="m19 14 1 2.5 2 1-2 1-1 2.5-1-2.5-2-1 2-1z"/></>,
+  };
+  return <svg {...common}>{paths[name]}</svg>;
+}
+
+const money = (amount: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(amount);
+const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const monthNow = () => localDate(new Date()).slice(0, 7);
+const niceMonth = (value: string) => new Date(`${value}-01T00:00:00`).toLocaleDateString("en-PH", { month: "long", year: "numeric" });
+
+function SpendingChart({ data }: { data: DashboardData["monthlyTrend"] }) {
+  const width = 620, height = 205, left = 36, right = 8, top = 14, bottom = 28;
+  const max = Math.max(10000, ...data.flatMap((point) => [point.income, point.needs + point.wants + point.installments]));
+  const chartW = width - left - right, chartH = height - top - bottom;
+  const pts = data.map((point, index) => ({ ...point, x: left + (data.length <= 1 ? chartW / 2 : index * chartW / (data.length - 1)), yIncome: top + chartH - point.income / max * chartH, ySpend: top + chartH - (point.needs + point.wants + point.installments) / max * chartH }));
+  const line = (key: "yIncome" | "ySpend") => pts.map((point, index) => `${index ? "L" : "M"}${point.x},${point[key]}`).join(" ");
+  const fmt = (n: number) => n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`;
+  return <div className="chart-wrap"><svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Monthly income and spending trend">
+    {[0, 1, 2, 3].map((i) => { const y = top + chartH * i / 3; return <g key={i}><line className="chart-grid" x1={left} x2={width - right} y1={y} y2={y}/><text className="chart-label" x="0" y={y + 3}>{fmt(max * (3 - i) / 3)}</text></g>; })}
+    {pts.length > 1 && <><path className="chart-line-income" d={line("yIncome")}/><path className="chart-line-spend" d={line("ySpend")}/></>}
+    {pts.map((point) => <g key={point.month}><circle className="chart-dot" cx={point.x} cy={point.yIncome} r="3.5"/><text className="chart-label" textAnchor="middle" x={point.x} y={height - 5}>{point.month}</text></g>)}
+  </svg></div>;
+}
+
+type ModalKind = "transaction" | "installment" | "capital" | null;
+
+export default function Home() {
+  const [month, setMonth] = useState(monthNow());
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [online, setOnline] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState<ModalKind>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try { setData(await getDashboard(month)); setOnline(true); setError(""); }
+    catch { setOnline(false); setData(null); }
+    finally { setLoading(false); }
+  }, [month]);
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, index) => {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - index);
+    return localDate(d).slice(0, 7);
+  }), []);
+
+  async function submitTransaction(form: FormData) {
+    setSaving(true); setError("");
+    try {
+      await createTransaction({ kind: String(form.get("kind")) as "Income" | "Expense", amount: Number(form.get("amount")), description: String(form.get("description")), category: String(form.get("category")), needType: (form.get("kind") === "Expense" ? String(form.get("needType")) : null) as NeedType | null, date: String(form.get("date")) });
+      setModal(null); await refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save entry. Check that the local API is running."); }
+    finally { setSaving(false); }
+  }
+
+  async function submitInstallment(form: FormData) {
+    setSaving(true); setError("");
+    try {
+      await createInstallment({ description: String(form.get("description")), category: String(form.get("category")), needType: String(form.get("needType")) as "Need" | "Want", totalAmount: Number(form.get("totalAmount")), termMonths: Number(form.get("termMonths")), startDate: String(form.get("startDate")) });
+      setModal(null); await refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save plan. Check that the local API is running."); }
+    finally { setSaving(false); }
+  }
+
+  async function submitCapital(form: FormData) {
+    setSaving(true); setError("");
+    try {
+      await updateCapital(Number(form.get("amount")));
+      setModal(null); await refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not update opening capital. Check that the local API is running."); }
+    finally { setSaving(false); }
+  }
+
+  const categories = data?.categoryBreakdown ?? [];
+  const maxCat = Math.max(1, ...categories.map((cat) => cat.amount));
+
+  return <div className="app-shell">
+    <aside className="sidebar">
+      <div className="brand"><span className="brand-mark"><Icon name="wallet"/></span> kwarta<span style={{ color: "#aaa", fontWeight: 400 }}>.</span></div>
+      <div className="nav-label">Workspace</div>
+      <a className="nav-link active" href="#overview"><Icon name="grid"/> Overview</a>
+      <a className="nav-link" href="#recent-activity"><Icon name="arrows"/> Transactions</a>
+      <a className="nav-link" href="#categories"><Icon name="pie"/> Categories</a>
+      <a className="nav-link" href="#installments"><Icon name="calendar"/> Installments</a>
+      <div className="nav-label" style={{ marginTop: 29 }}>Preferences</div>
+      <button className="nav-link" onClick={() => { setError(""); setModal("capital"); }} style={{ width: "100%", border: 0, background: "transparent", textAlign: "left" }}><Icon name="settings"/> Settings</button>
+      <div className="sidebar-spacer"/>
+      <div className="privacy-card"><div className="privacy-title"><Icon name="shield"/> Your money stays yours</div><p>Private by design. Your data is saved on this laptop and never sent to a cloud.</p></div>
+      <div className="profile"><div className="avatar">G</div><div><div className="profile-name">My wallet</div><div className="profile-sub">Personal account</div></div></div>
+    </aside>
+    <main className="main"><div className="main-inner">
+      <div className="mobile-top"><div className="brand"><span className="brand-mark"><Icon name="wallet"/></span> kwarta<span style={{ color: "#aaa", fontWeight: 400 }}>.</span></div><span className="api-status"><i className={`status-dot ${online ? "online" : ""}`}/>{online ? "Local database" : "API offline"}</span></div>
+      <header className="topbar" id="overview"><div><div className="eyebrow">Your money, made clear</div><h1>Good day, Gwapo<span style={{ color: "#aaa" }}>.</span></h1></div><div className="top-actions"><select className="month-select" aria-label="Select month" value={month} onChange={(event) => setMonth(event.target.value)}>{monthOptions.map((option) => <option key={option} value={option}>{niceMonth(option)}</option>)}</select><button className="button" onClick={() => { setError(""); setModal("transaction"); }}><Icon name="plus"/><span className="button-label">Add entry</span></button></div></header>
+      {!online && <div className="notice"><strong>Connect your local database to get started.</strong> Start the API with <code>dotnet run --project api</code> and this dashboard will load your private data. The database file is created on your laptop automatically.</div>}
+      {loading && !data ? <div className="card" style={{ padding: 30, textAlign: "center", color: "#999", fontSize: 11 }}>Loading your money overview…</div> : <>
+        <section className="summary-grid">
+          <button className="card summary-card featured" onClick={() => { setError(""); setModal("capital"); }} style={{ textAlign: "left", cursor: "pointer" }} title="Update opening capital"><div className="summary-label">Available balance <Icon name="wallet"/></div><div className="summary-value">{money(data?.currentBalance ?? 0)}</div><div className="summary-note">Opening capital + income − spending · edit</div></button>
+          <div className="card summary-card"><div className="summary-label">Income this month <Icon name="income"/></div><div className="summary-value">{money(data?.monthIncome ?? 0)}</div><div className="summary-note">Paycheck and other income</div></div>
+          <div className="card summary-card"><div className="summary-label">Spent this month <Icon name="expense"/></div><div className="summary-value">{money(data?.monthExpenses ?? 0)}</div><div className="summary-note">Across needs, wants & plans</div></div>
+          <div className="card summary-card"><div className="summary-label">Monthly commitments <Icon name="calendar"/></div><div className="summary-value">{money(data?.monthInstallments ?? 0)}</div><div className="summary-note">Installment payments due</div></div>
+        </section>
+        <section className="trend-row">
+          <div className="card panel"><div className="panel-head"><div><div className="panel-title">Your money over time</div><div className="panel-subtitle">Income compared with what went out · last 6 months</div></div><div className="legend"><span><i/>Income</span><span><i className="legend-needs"/>Spending</span></div></div><SpendingChart data={data?.monthlyTrend ?? []}/></div>
+          <div className="card panel" id="categories"><div className="panel-head"><div><div className="panel-title">Where it went</div><div className="panel-subtitle">{niceMonth(month)} · {money(data?.monthExpenses ?? 0)} total</div></div><span className="api-status">Needs & wants</span></div>
+            {categories.length ? <div className="category-list">{categories.slice(0, 5).map((cat) => <div className="category-row" key={cat.category}><span className="category-icon"><Icon name={cat.category.toLowerCase().includes("food") || cat.category.toLowerCase().includes("dining") ? "food" : cat.category.toLowerCase().includes("home") || cat.category.toLowerCase().includes("rent") || cat.category.toLowerCase().includes("bill") ? "home" : cat.category.toLowerCase().includes("shop") ? "cart" : cat.needType === "Want" ? "spark" : "tag"}/></span><div><div className="category-name">{cat.category}</div><div className="category-meta">{cat.needType === "Want" ? "Want" : cat.needType === "Installment" ? "Installment" : "Need"}</div></div><div><div className="category-amount">{money(cat.amount)}</div><div className="category-bar"><i style={{ width: `${Math.round(cat.amount / maxCat * 100)}%` }}/></div></div></div>)}</div> : <div className="empty-state">No spending recorded this month yet.</div>}
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18, paddingTop: 13, borderTop: "1px solid #f0efec", color: "#888", fontSize: 9 }}><span>Needs <strong style={{ color: "#333" }}>{money(data?.monthNeeds ?? 0)}</strong></span><span>Wants <strong style={{ color: "#333" }}>{money(data?.monthWants ?? 0)}</strong></span></div>
+          </div>
+        </section>
+        <section className="bottom-row">
+          <div className="card panel" id="recent-activity"><div className="panel-head"><div><div className="panel-title">Recent activity</div><div className="panel-subtitle">Your latest ins and outs</div></div><button className="button secondary" style={{ minHeight: 29, fontSize: 9 }} onClick={() => { setError(""); setModal("transaction"); }}><Icon name="plus"/> Add entry</button></div>
+            {data?.recentTransactions.length ? <div className="transaction-list">{data.recentTransactions.slice(0, 6).map((item) => <div className="transaction-row" key={item.id}><span className="transaction-icon"><Icon name={item.kind === "Income" ? "income" : item.category.toLowerCase().includes("food") ? "food" : "tag"}/></span><div><div className="transaction-title">{item.description}</div><div className="transaction-category">{item.category} · {new Date(`${item.date.slice(0, 10)}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}</div></div><span className="pill">{item.kind === "Income" ? "Income" : item.needType === "Want" ? "Want" : item.needType === "Installment" ? "Installment" : "Need"}</span><div className={`transaction-amount ${item.kind === "Income" ? "income" : ""}`}>{item.kind === "Income" ? "+" : "−"}{money(item.amount)}</div></div>)}</div> : <div className="empty-state">Your entries will show up here.</div>}
+          </div>
+          <div className="card panel" id="installments"><div className="panel-head"><div><div className="panel-title">Paying over time</div><div className="panel-subtitle">Keep track of what’s still owed</div></div><button className="button secondary" style={{ minHeight: 29, fontSize: 9 }} onClick={() => { setError(""); setModal("installment"); }}><Icon name="plus"/> New plan</button></div>
+            {data?.upcomingInstallments.length ? <div className="installment-list">{data.upcomingInstallments.map((plan) => <div className="installment-item" key={plan.id}><div className="installment-top"><div><div className="installment-name">{plan.description}</div><div className="installment-next">Next payment {new Date(`${plan.nextDueDate.slice(0, 10)}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" })} · {plan.paidMonths}/{plan.termMonths} paid</div></div><div className="installment-amount">{money(plan.monthlyAmount)}<small>/ month</small></div></div><div className="progress-track"><span style={{ width: `${Math.min(100, plan.paidMonths / plan.termMonths * 100)}%` }}/></div><div className="installment-foot"><span>{money(plan.remainingAmount)} remaining</span><button onClick={async () => { try { await payInstallment(plan.id, localDate(new Date())); await refresh(); } catch { setError("Could not record payment. Check that the local API is running."); } }} style={{ border: 0, padding: 0, background: "transparent", color: "#666", fontSize: 8, textDecoration: "underline" }}>Record payment</button></div></div>)}</div> : <div className="empty-state">No active payment plans. Add one when you buy something on credit.</div>}
+          </div>
+        </section>
+      </>}
+      <div className="privacy-mobile"><Icon name="shield"/> Your data is stored locally on this device.</div>
+    </div></main>
+    {modal && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(null); }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div className="modal-head"><div><div className="modal-title" id="modal-title">{modal === "transaction" ? "Add an entry" : modal === "installment" ? "New payment plan" : "Set opening capital"}</div><div className="modal-desc">{modal === "transaction" ? "Keep your money picture up to date." : modal === "installment" ? "Spread the purchase into monthly payments." : "Enter the money you had when you started tracking."}</div></div><button className="icon-button" aria-label="Close" onClick={() => setModal(null)}><Icon name="close"/></button></div>
+      <form action={async (form) => { if (modal === "transaction") await submitTransaction(form); else if (modal === "installment") await submitInstallment(form); else await submitCapital(form); }}>
+        <div className="form-grid">
+          {modal === "capital" ? <>
+            <div className="field wide"><label htmlFor="amount">Opening capital (PHP)</label><input name="amount" id="amount" type="number" min="0" step="0.01" defaultValue={data?.openingCapital ?? 0} required/></div>
+          </> : modal === "transaction" ? <>
+            <div className="field"><label htmlFor="kind">Entry type</label><select name="kind" id="kind"><option value="Expense">Expense</option><option value="Income">Income / paycheck</option></select></div>
+            <div className="field"><label htmlFor="amount">Amount (PHP)</label><input name="amount" id="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required/></div>
+            <div className="field wide"><label htmlFor="description">Description</label><input name="description" id="description" placeholder="e.g. Grocery run, Monthly salary" required/></div>
+            <div className="field"><label htmlFor="category">Category</label><select name="category" id="category"><option>Food & dining</option><option>Housing & bills</option><option>Transport</option><option>Shopping</option><option>Health</option><option>Entertainment</option><option>Salary</option><option>Other</option></select></div>
+            <div className="field"><label htmlFor="needType">Type</label><select name="needType" id="needType"><option value="Need">Need</option><option value="Want">Want</option></select></div>
+            <div className="field wide"><label htmlFor="date">Date</label><input name="date" id="date" type="date" defaultValue={localDate(new Date())} required/></div>
+          </> : <>
+            <div className="field wide"><label htmlFor="description">What did you buy?</label><input name="description" id="description" placeholder="e.g. Laptop" required/></div>
+            <div className="field"><label htmlFor="totalAmount">Total price (PHP)</label><input name="totalAmount" id="totalAmount" type="number" min="0.01" step="0.01" placeholder="0.00" required/></div>
+            <div className="field"><label htmlFor="termMonths">Months to pay</label><input name="termMonths" id="termMonths" type="number" min="1" max="120" defaultValue="12" required/></div>
+            <div className="field"><label htmlFor="category">Category</label><select name="category" id="category"><option>Electronics</option><option>Home</option><option>Shopping</option><option>Health</option><option>Other</option></select></div>
+            <div className="field"><label htmlFor="needType">Type</label><select name="needType" id="needType"><option value="Need">Need</option><option value="Want">Want</option></select></div>
+            <div className="field wide"><label htmlFor="startDate">First payment date</label><input name="startDate" id="startDate" type="date" defaultValue={localDate(new Date())} required/></div>
+          </>}
+        </div>
+        {error && <div className="form-error">{error}</div>}
+        <div className="form-actions"><button type="button" className="button secondary" onClick={() => setModal(null)}>Cancel</button><button type="submit" className="button" disabled={saving}>{saving ? "Saving…" : modal === "transaction" ? "Save entry" : modal === "installment" ? "Create plan" : "Save capital"}</button></div>
+      </form>
+    </div></div>}
+  </div>;
+}

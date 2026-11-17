@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+api/bin/
+api/obj/
+api/data/
+.DS_Store
