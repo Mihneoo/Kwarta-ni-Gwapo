@@ -25,6 +25,8 @@ Open a terminal in this folder and start the API:
 dotnet run --project api
 ```
 
+If Windows reports that an application-control policy blocked the API executable or DLL, changing the `dotnet run` command will not resolve the policy. Check the Windows Code Integrity or AppLocker event logs for the block details, then ask the device administrator to authorize the project or its trusted build output. Do not disable application-control protections to work around the block.
+
 In a second terminal, install the web app packages and start Next.js:
 
 ```powershell
