@@ -17,9 +17,11 @@ export type Installment = {
   category: string;
   needType: "Need" | "Want";
   totalAmount: number;
-  monthlyAmount: number;
+  paymentAmount: number;
+  frequency: "Monthly" | "Every15Days";
   termMonths: number;
-  paidMonths: number;
+  paymentCount: number;
+  paidPayments: number;
   startDate: string;
   nextDueDate: string;
   remainingAmount: number;
@@ -37,6 +39,8 @@ export type DashboardData = {
   monthWants: number;
   monthInstallments: number;
   monthLabel: string;
+  salaryFrequency: "Every15Days" | "Manual";
+  nextPayDate: string | null;
   monthlyTrend: MonthPoint[];
   categoryBreakdown: CategoryTotal[];
   recentTransactions: Transaction[];

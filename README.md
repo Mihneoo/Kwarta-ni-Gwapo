@@ -6,11 +6,13 @@ A private personal money tracker built with Next.js, Tailwind CSS, ASP.NET Core,
 
 - Tracks opening capital, paychecks, and everyday spending.
 - Groups expenses into needs and wants, with categories such as food, transport, and bills.
-- Tracks installment plans, monthly due dates, payments made, and remaining balance.
+- Tracks installment plans with monthly or every-15-day payment schedules, payments made, and remaining balance.
+- Lets you record salary at a manually chosen date and amount, or keep a 15-day payday reminder. Take-home pay is never assumed to be a fixed amount.
+- Includes a persistent light/dark theme switch and quick Housing, Food, and other expense category buttons.
 - Shows current balance, monthly totals, a six-month income/spending chart, category breakdown, recent activity, and upcoming payments.
 - Formats values in Philippine pesos.
 
-The first API launch creates a local database and adds example records so the dashboard has something to show. Set your own opening capital by clicking the available balance card or Settings. You can remove the example database before first launch if you prefer a blank start: delete `api/data/kwarta.db`; the next API launch will create a fresh example database. This sample version does not yet include deleting individual entries.
+Tracking begins in November 2026. The first API launch creates an empty local database with zero opening capital and manual payday entry; no demo transactions or installment plans are inserted. Set your capital and payday schedule in Settings, then add your own transactions and plans. The app does not yet include deleting individual entries.
 
 ## Requirements
 
@@ -36,17 +38,23 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The API listens at `http://localhost:5055`. Its health check is `http://localhost:5055/api/health`.
 
-The API applies the SQLite schema migration at startup and stores the database at `api/data/kwarta.db`. Keep that file to retain your data. Back it up by copying it while both services are stopped.
+After changing API code, stop the running API with Ctrl+C and run `dotnet run --project api` again. `dotnet run` does not hot-reload endpoint changes.
+
+The API applies the SQLite schema migration at startup and stores the database at `api/data/kwarta.db`. Keep that file to retain your data. Back it up by copying it while both services are stopped. The dashboard history and entry forms begin on November 1, 2026.
 
 ## Local API
 
 - `GET /api/dashboard?month=YYYY-MM`
 - `GET /api/transactions?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `GET /api/transactions/{id}`
 - `POST /api/transactions`
+- `PUT /api/transactions/{id}`
+- `DELETE /api/transactions/{id}`
 - `GET /api/installments`
 - `POST /api/installments`
 - `POST /api/installments/{id}/payments`
 - `GET /api/settings`
 - `PUT /api/settings/capital`
+- `PUT /api/settings/salary-schedule`
 
 There is no sign-in or external service. CORS is limited to the local Next.js development origins.
