@@ -33,7 +33,7 @@ h1 { margin:7px 0 0; font-size:25px; letter-spacing:-1px; line-height:1.15; }
 .button.secondary { border-color:var(--line); background:white; color:#333; }
 .button.secondary:hover { background:#f5f4f1; }
 .button svg { width:15px; height:15px; }
-.summary-grid { display:grid; grid-template-columns:1.35fr 1fr 1fr 1fr; gap:13px; }
+.summary-grid { display:grid; grid-template-columns:1.25fr repeat(4,1fr); gap:13px; }
 .card { border:1px solid var(--line); border-radius:12px; background:var(--white); }
 .summary-card { min-height:126px; padding:17px 18px; }
 .summary-card.featured { background:#191919; color:white; border-color:#191919; }
@@ -74,7 +74,7 @@ h1 { margin:7px 0 0; font-size:25px; letter-spacing:-1px; line-height:1.15; }
 .category-summary { display:flex; justify-content:space-between; margin-top:18px; padding-top:13px; border-top:1px solid var(--line); color:var(--muted); font-size:9px; }
 .category-summary strong { color:var(--ink); }
 .bottom-row { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(280px,1fr); gap:14px; margin-top:15px; }
-.transaction-list { margin-top:14px; }
+.transaction-list { max-height:310px; margin-top:14px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
 .transaction-row { display:grid; grid-template-columns:33px minmax(90px,1fr) auto auto 24px 54px; align-items:center; gap:9px; padding:11px 0; border-top:1px solid #f0efec; }
 .transaction-icon { display:grid; place-items:center; width:31px; height:31px; border-radius:9px; background:#f4f3f0; color:#5d5a55; }
 .transaction-icon svg { width:14px; height:14px; }

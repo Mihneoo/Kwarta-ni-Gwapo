@@ -1,4 +1,4 @@
-export type EntryKind = "Income" | "Expense";
+export type EntryKind = "Income" | "Expense" | "Withdrawal" | "CashExpense";
 export type NeedType = "Need" | "Want" | "Installment";
 
 export type Transaction = {
@@ -8,8 +8,11 @@ export type Transaction = {
   description: string;
   category: string;
   needType?: NeedType | null;
+  withdrawalId?: number | null;
   date: string;
 };
+
+export type CashWithdrawal = { id: number; description: string; amount: number; date: string; remainingAmount: number };
 
 export type Installment = {
   id: number;
@@ -32,7 +35,9 @@ export type CategoryTotal = { category: string; amount: number; needType: NeedTy
 
 export type DashboardData = {
   openingCapital: number;
-  currentBalance: number;
+  bankBalance: number;
+  cashOnHand: number;
+  totalBalance: number;
   monthIncome: number;
   monthExpenses: number;
   monthNeeds: number;

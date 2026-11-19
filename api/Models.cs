@@ -26,6 +26,7 @@ public sealed class MoneyDb(DbContextOptions<MoneyDb> options) : DbContext(optio
         model.Entity<InstallmentPlan>().Property(x => x.Frequency).HasMaxLength(16);
         model.Entity<SalarySchedule>().Property(x => x.Frequency).HasMaxLength(16);
         model.Entity<MoneyTransaction>().HasOne<InstallmentPlan>().WithMany().HasForeignKey(x => x.InstallmentPlanId).OnDelete(DeleteBehavior.SetNull);
+        model.Entity<MoneyTransaction>().HasOne<MoneyTransaction>().WithMany().HasForeignKey(x => x.WithdrawalId).OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -45,6 +46,7 @@ public sealed class MoneyTransaction
     public string? NeedType { get; set; }
     public DateTime Date { get; set; }
     public int? InstallmentPlanId { get; set; }
+    public int? WithdrawalId { get; set; }
 }
 
 public sealed class InstallmentPlan
@@ -74,7 +76,7 @@ public sealed class SalarySchedule
     public DateTime? NextPayDate { get; set; }
 }
 
-public sealed record TransactionInput(string Kind, decimal Amount, string Description, string Category, string? NeedType, DateTime Date);
+public sealed record TransactionInput(string Kind, decimal Amount, string Description, string Category, string? NeedType, DateTime Date, int? WithdrawalId = null);
 public sealed record InstallmentInput(string Description, string Category, string? NeedType, decimal TotalAmount, int TermMonths, string Frequency, DateTime StartDate);
 public sealed record PaymentInput(DateTime Date);
 public sealed record CapitalInput(decimal Amount);
@@ -90,6 +92,7 @@ public static class ApiShape
         description = transaction.Description,
         category = transaction.Category,
         needType = transaction.NeedType,
+        withdrawalId = transaction.WithdrawalId,
         date = transaction.Date.ToString("yyyy-MM-dd")
     };
 

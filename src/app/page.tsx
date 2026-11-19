@@ -1,39 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createInstallment, createTransaction, deleteTransaction, getDashboard, payInstallment, updateCapital, updateSalarySchedule, updateTransaction } from "@/lib/api";
-import type { DashboardData, NeedType, Transaction } from "@/types";
+import { ArrowDown, ArrowLeftRight, ArrowUp, ArrowUpRight, CalendarDays, ChevronRight, Coffee, House, LayoutDashboard, Moon, Pencil, PieChart, Plus, Settings, ShieldCheck, ShoppingCart, Sparkles, Sun, Tag, Trash2, Utensils, Wallet, X, type LucideIcon } from "lucide-react";
+import { createInstallment, createTransaction, deleteTransaction, getDashboard, getWithdrawals, payInstallment, updateCapital, updateSalarySchedule, updateTransaction } from "@/lib/api";
+import type { CashWithdrawal, DashboardData, NeedType, Transaction } from "@/types";
 
 type IconName = "grid" | "arrows" | "pie" | "calendar" | "settings" | "shield" | "plus" | "arrow" | "wallet" | "income" | "expense" | "chevron" | "close" | "food" | "home" | "cart" | "tag" | "coffee" | "spark" | "moon" | "sun" | "trash" | "edit";
 
+const icons: Record<IconName, LucideIcon> = {
+  grid: LayoutDashboard, arrows: ArrowLeftRight, pie: PieChart, calendar: CalendarDays,
+  settings: Settings, shield: ShieldCheck, plus: Plus, arrow: ArrowUpRight, wallet: Wallet,
+  income: ArrowUp, expense: ArrowDown, chevron: ChevronRight, close: X, food: Utensils,
+  home: House, cart: ShoppingCart, tag: Tag, coffee: Coffee, spark: Sparkles,
+  moon: Moon, sun: Sun, trash: Trash2, edit: Pencil,
+};
+
 function Icon({ name }: { name: IconName }) {
-  const common = { width: 17, height: 17, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true as const };
-  const paths: Record<IconName, React.ReactNode> = {
-    grid: <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
-    arrows: <><path d="M7 7h13l-3-3"/><path d="M20 7l-3 3"/><path d="M17 17H4l3 3"/><path d="M4 17l3-3"/></>,
-    pie: <><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M13 3.1A9 9 0 0 1 20.9 11H13z"/></>,
-    calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
-    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06-1.8 1.8-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.55v-.11a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06-1.8-1.8.06-.06A1.7 1.7 0 0 0 8.14 15a1.7 1.7 0 0 0-1.56-1.03H6v-2.55h.58A1.7 1.7 0 0 0 8.14 10a1.7 1.7 0 0 0-.34-1.87l-.06-.06 1.8-1.8.06.06a1.7 1.7 0 0 0 1.87.34A1.7 1.7 0 0 0 12.5 5.1V5h2.55v.11a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06 1.8 1.8-.06.06a1.7 1.7 0 0 0-.34 1.87 1.7 1.7 0 0 0 1.56 1.03h.11v2.55h-.11A1.7 1.7 0 0 0 19.4 15z"/></>,
-    shield: <><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/><path d="m9 12 2 2 4-4"/></>,
-    plus: <><path d="M12 5v14M5 12h14"/></>,
-    arrow: <><path d="M7 17 17 7M7 7h10v10"/></>,
-    wallet: <><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M16 15h2"/></>,
-    income: <><path d="M12 19V5M6 11l6-6 6 6"/></>,
-    expense: <><path d="M12 5v14M6 13l6 6 6-6"/></>,
-    chevron: <><path d="m9 18 6-6-6-6"/></>,
-    close: <><path d="m18 6-12 12M6 6l12 12"/></>,
-    food: <><path d="M7 3v8M4 3v5a3 3 0 0 0 6 0V3M7 11v10M17 3c-2 2-3 4-3 7h3v11M17 3v7"/></>,
-    home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-8h6v8"/></>,
-    cart: <><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.5 12h12L21 7H5"/></>,
-    tag: <><path d="M20 13 13 20 3 10V3h7z"/><circle cx="7.5" cy="7.5" r=".8"/></>,
-    coffee: <><path d="M4 8h14v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M18 10h1a3 3 0 0 1 0 6h-1M8 3v2M13 3v2"/></>,
-    spark: <><path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-2-5.8L4 11l6-2.2z"/><path d="m19 14 1 2.5 2 1-2 1-1 2.5-1-2.5-2-1 2-1z"/></>,
-    moon: <path d="M20.5 15A8 8 0 0 1 9 3.5 8.5 8.5 0 1 0 20.5 15Z"/>,
-    sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></>,
-    trash: <><path d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m4 4v6m6-6v6"/></>,
-    edit: <><path d="m15 5 4 4M4 20l4-.8L19.2 8a2.1 2.1 0 0 0-3-3L5 16.2z"/><path d="M13.5 20H20"/></>,
-  };
-  return <svg {...common}>{paths[name]}</svg>;
+  const LucideIconComponent = icons[name];
+  return <LucideIconComponent size={17} strokeWidth={1.7} aria-hidden="true"/>;
 }
 
 const money = (amount: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(amount);
@@ -69,7 +53,9 @@ export default function Home() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [entryKind, setEntryKind] = useState<"Expense" | "Income">("Expense");
+  const [entryKind, setEntryKind] = useState<"Expense" | "Income" | "Withdrawal" | "CashExpense">("Expense");
+  const [withdrawalSource, setWithdrawalSource] = useState<number | null>(null);
+  const [withdrawals, setWithdrawals] = useState<CashWithdrawal[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("Housing");
   const [salaryFrequency, setSalaryFrequency] = useState<"Every15Days" | "Manual">("Every15Days");
   const [salaryStartDate, setSalaryStartDate] = useState("2026-11-01");
@@ -89,10 +75,18 @@ export default function Home() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try { setData(await getDashboard(month)); setOnline(true); setError(""); }
-    catch { setOnline(false); setData(null); }
+    catch { setOnline(false); setActivityError("Could not refresh the saved activity. Check that the local API is running, then refresh the page."); }
     finally { setLoading(false); }
   }, [month]);
   useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    if (modal !== "transaction" || entryKind !== "CashExpense") return;
+    getWithdrawals().then((items) => {
+      setWithdrawals(items);
+      setWithdrawalSource((current) => current && items.some((item) => item.id === current && item.remainingAmount > 0)
+        ? current : items.find((item) => item.remainingAmount > 0)?.id ?? null);
+    }).catch((e) => setError(e instanceof Error ? e.message : "Could not load withdrawals."));
+  }, [modal, entryKind]);
 
   const monthOptions = useMemo(() => {
     const first = new Date(2026, 10, 1), now = new Date(); now.setDate(1);
@@ -108,12 +102,18 @@ export default function Home() {
   }
 
   async function submitTransaction(form: FormData) {
-    setSaving(true); setError("");
+    setSaving(true); setError(""); setActivityError("");
     try {
-      const kind = String(form.get("kind") ?? editingTransaction?.kind ?? entryKind) as "Income" | "Expense";
-      const transaction = { kind, amount: Number(form.get("amount")), description: String(form.get("description")), category: String(form.get("category")), needType: (editingTransaction?.needType === "Installment" ? "Installment" : kind === "Expense" ? String(form.get("needType")) : null) as NeedType | null, date: String(form.get("date")) };
-      if (editingTransaction) await updateTransaction(editingTransaction.id, transaction);
-      else await createTransaction(transaction);
+      const kind = String(form.get("kind") ?? editingTransaction?.kind ?? entryKind) as "Income" | "Expense" | "Withdrawal" | "CashExpense";
+      const transaction = { kind, amount: Number(form.get("amount")), description: String(form.get("description")), category: String(form.get("category")), needType: (editingTransaction?.needType === "Installment" ? "Installment" : kind === "Expense" || kind === "CashExpense" ? String(form.get("needType")) : null) as NeedType | null, date: String(form.get("date")), withdrawalId: kind === "CashExpense" ? Number(form.get("withdrawalId")) : null };
+      const saved = editingTransaction
+        ? await updateTransaction(editingTransaction.id, transaction)
+        : await createTransaction(transaction);
+      setData((current) => current ? {
+        ...current,
+        recentTransactions: [saved, ...current.recentTransactions.filter((item) => item.id !== saved.id)]
+          .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id),
+      } : current);
       setModal(null); setEditingTransaction(null); await refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save entry. Check that the local API is running."); }
     finally { setSaving(false); }
@@ -177,9 +177,6 @@ export default function Home() {
       <div className="brand"><span className="brand-mark"><Icon name="wallet"/></span> kwarta<span style={{ color: "#aaa", fontWeight: 400 }}>.</span></div>
       <div className="nav-label">Workspace</div>
       <a className="nav-link active" href="#overview"><Icon name="grid"/> Overview</a>
-      <a className="nav-link" href="#recent-activity"><Icon name="arrows"/> Transactions</a>
-      <a className="nav-link" href="#categories"><Icon name="pie"/> Categories</a>
-      <a className="nav-link" href="#installments"><Icon name="calendar"/> Installments</a>
       <div className="nav-label" style={{ marginTop: 29 }}>Preferences</div>
       <button className="nav-link" onClick={() => { setError(""); setModal("settings"); }} style={{ width: "100%", border: 0, background: "transparent", textAlign: "left" }}><Icon name="settings"/> Settings</button>
       <div className="sidebar-spacer"/>
@@ -192,7 +189,8 @@ export default function Home() {
       {!online && <div className="notice"><strong>Connect your local database to get started.</strong> Start the API with <code>dotnet run --project api</code> and this dashboard will load your private data. The database file is created on your laptop automatically.</div>}
       {loading && !data ? <div className="card" style={{ padding: 30, textAlign: "center", color: "#999", fontSize: 11 }}>Loading your money overview…</div> : <>
         <section className="summary-grid">
-          <button className="card summary-card featured" onClick={() => { setError(""); setModal("capital"); }} style={{ textAlign: "left", cursor: "pointer" }} title="Update opening capital"><div className="summary-label">Available balance <Icon name="wallet"/></div><div className="summary-value">{money(data?.currentBalance ?? 0)}</div><div className="summary-note">Opening capital + income − spending · edit</div></button>
+          <button className="card summary-card featured" onClick={() => { setError(""); setModal("capital"); }} style={{ textAlign: "left", cursor: "pointer" }} title="Update opening capital"><div className="summary-label">Bank balance <Icon name="wallet"/></div><div className="summary-value">{money(data?.bankBalance ?? 0)}</div><div className="summary-note">Total money {money(data?.totalBalance ?? 0)} · edit opening balance</div></button>
+          <div className="card summary-card"><div className="summary-label">Cash on hand <Icon name="wallet"/></div><div className="summary-value">{money(data?.cashOnHand ?? 0)}</div><div className="summary-note">Withdrawn, not yet spent</div></div>
           <div className="card summary-card"><div className="summary-label">Income this month <Icon name="income"/></div><div className="summary-value">{money(data?.monthIncome ?? 0)}</div><div className="summary-note">{data?.salaryFrequency === "Every15Days" && data.nextPayDate ? `Next payday · ${new Date(`${data.nextPayDate}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}` : "Add salary whenever it arrives"}</div></div>
           <div className="card summary-card"><div className="summary-label">Spent this month <Icon name="expense"/></div><div className="summary-value">{money(data?.monthExpenses ?? 0)}</div><div className="summary-note">Across needs, wants & plans</div></div>
           <div className="card summary-card"><div className="summary-label">Monthly commitments <Icon name="calendar"/></div><div className="summary-value">{money(data?.monthInstallments ?? 0)}</div><div className="summary-note">Installment payments due</div></div>
@@ -207,7 +205,7 @@ export default function Home() {
         <section className="bottom-row">
           <div className="card panel" id="recent-activity"><div className="panel-head"><div><div className="panel-title">Recent activity</div><div className="panel-subtitle">Your latest ins and outs</div></div><button className="button secondary" style={{ minHeight: 29, fontSize: 9 }} onClick={() => { setEditingTransaction(null); setError(""); setEntryKind("Expense"); setSelectedCategory("Housing"); setModal("transaction"); }}><Icon name="plus"/> Add entry</button></div>
             {activityError && <div className="form-error">{activityError}</div>}
-            {data?.recentTransactions.length ? <div className="transaction-list">{data.recentTransactions.slice(0, 6).map((item) => <div className="transaction-row" key={item.id}>
+            {data?.recentTransactions.length ? <div className="transaction-list">{data.recentTransactions.map((item) => <div className="transaction-row" key={item.id}>
               <span className="transaction-icon"><Icon name={item.kind === "Income" ? "income" : item.category.toLowerCase().includes("food") ? "food" : "tag"}/></span>
               <div><div className="transaction-title">{item.description}</div><div className="transaction-category">{item.category} · {new Date(`${item.date.slice(0, 10)}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}</div></div>
               <span className="pill">{item.kind === "Income" ? "Income" : item.needType === "Want" ? "Want" : item.needType === "Installment" ? "Installment" : "Need"}</span>
@@ -232,11 +230,12 @@ export default function Home() {
             <div className="field wide setting-group"><p className="setting-title">Salary schedule</p><label htmlFor="salaryFrequency">Payday timing</label><select name="salaryFrequency" id="salaryFrequency" value={salaryFrequency} onChange={(event) => setSalaryFrequency(event.target.value as "Every15Days" | "Manual")}><option value="Every15Days">Every 15 days</option><option value="Manual">I’ll record each payday</option></select>{salaryFrequency === "Every15Days" ? <div className="field" style={{ marginTop: 10 }}><label htmlFor="salaryStartDate">Next payday</label><input name="salaryStartDate" id="salaryStartDate" type="date" min="2026-11-01" value={salaryStartDate} onChange={(event) => setSalaryStartDate(event.target.value)} required/></div> : null}<p className="setting-help">Salary amounts are always entered when received, so the take-home amount can change with deductions.</p></div>
           </> : null}
           {modal === "transaction" || modal === "editTransaction" ? <>
-            {editingTransaction?.needType === "Installment" ? <div className="field"><label>Entry type</label><div className="readonly-field">Installment payment</div><input type="hidden" name="kind" value="Expense"/></div> : <div className="field"><label htmlFor="kind">Entry type</label><select name="kind" id="kind" value={entryKind} onChange={(event) => { const next = event.target.value as "Expense" | "Income"; setEntryKind(next); setSelectedCategory(next === "Income" ? "Salary" : "Housing"); }}><option value="Expense">Expense</option><option value="Income">Income / paycheck</option></select></div>}
+            {editingTransaction?.needType === "Installment" ? <div className="field"><label>Entry type</label><div className="readonly-field">Installment payment</div><input type="hidden" name="kind" value="Expense"/></div> : <div className="field"><label htmlFor="kind">Entry type</label><select name="kind" id="kind" value={entryKind} onChange={(event) => { const next = event.target.value as "Expense" | "Income" | "Withdrawal" | "CashExpense"; setEntryKind(next); setSelectedCategory(next === "Income" ? "Salary" : "Housing"); }}><option value="Expense">Expense from bank</option><option value="Income">Income / paycheck</option><option value="Withdrawal">Withdraw cash</option><option value="CashExpense">Spend withdrawn cash</option></select></div>}
             <div className="field"><label htmlFor="amount">Amount (PHP)</label><input name="amount" id="amount" type="number" min="0.01" step="0.01" defaultValue={editingTransaction?.amount} placeholder="0.00" required/></div>
             <div className="field wide"><label htmlFor="description">Description</label><input name="description" id="description" defaultValue={editingTransaction?.description} placeholder={entryKind === "Income" ? "e.g. Salary after deductions" : "e.g. Grocery run"} required/></div>
+            {entryKind === "CashExpense" ? <div className="field wide"><label htmlFor="withdrawalId">Spend from withdrawal</label><select name="withdrawalId" id="withdrawalId" value={withdrawalSource ?? ""} onChange={(event) => setWithdrawalSource(Number(event.target.value) || null)} required><option value="">{withdrawals.some((item) => item.remainingAmount > 0) ? "Choose a withdrawal" : "No unspent withdrawals found"}</option>{withdrawals.filter((item) => item.remainingAmount > 0).map((item) => <option key={item.id} value={item.id}>{item.description} · {money(item.remainingAmount)} left</option>)}</select></div> : null}
             {editingTransaction?.needType === "Installment" ? <div className="field wide"><label>Category</label><div className="readonly-field">{editingTransaction.category}</div><input type="hidden" name="category" value={editingTransaction.category}/><input type="hidden" name="needType" value="Installment"/></div> : <div className="field wide"><label>Quick category</label><input type="hidden" name="category" value={selectedCategory}/><div className="category-buttons">{(entryKind === "Income" ? [["Salary", "Salary"], ["Other", "Other"]] : [["Housing", "Housing"], ["Food", "Food"], ["Transport", "Transport"], ["Bills", "Bills"], ["Shopping", "Shopping"], ["Health", "Health"], ["Entertainment", "Entertainment"], ["Other", "Other"]]).map(([label, value]) => <button key={value} type="button" className={`category-choice ${selectedCategory === value ? "selected" : ""}`} onClick={() => setSelectedCategory(value)}>{label}</button>)}</div></div>}
-            {editingTransaction?.needType === "Installment" ? <div className="field"><label>Type</label><div className="readonly-field">Installment</div></div> : entryKind === "Expense" ? <div className="field"><label htmlFor="needType">Type</label><select name="needType" id="needType" defaultValue={editingTransaction?.needType ?? "Need"}><option value="Need">Need</option><option value="Want">Want</option></select></div> : <div className="field"><label>Pay timing</label><div className="readonly-field">{salaryFrequency === "Every15Days" ? "Every 15 days" : "Manual payday"}</div></div>}
+            {editingTransaction?.needType === "Installment" ? <div className="field"><label>Type</label><div className="readonly-field">Installment</div></div> : entryKind === "Expense" || entryKind === "CashExpense" ? <div className="field"><label htmlFor="needType">Type</label><select name="needType" id="needType" defaultValue={editingTransaction?.needType ?? "Need"}><option value="Need">Need</option><option value="Want">Want</option></select></div> : null}
             <div className="field wide"><label htmlFor="date">{entryKind === "Income" ? "Payday" : "Date"}</label><input name="date" id="date" type="date" min="2026-11-01" defaultValue={editingTransaction?.date ?? localDate(new Date())} required/></div>
           </> : null}
           {modal === "installment" ? <>
